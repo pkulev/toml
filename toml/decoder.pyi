@@ -1,11 +1,6 @@
 from toml.tz import TomlTz as TomlTz
 from typing import Any, Optional
 
-unicode = str
-basestring = str
-unichr = chr
-FNFError = FileNotFoundError
-FNFError = IOError
 TIME_RE: Any
 
 class TomlDecodeError(ValueError):

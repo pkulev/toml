@@ -164,8 +164,8 @@ API Reference
   Parse a file or a list of files as TOML and return a dictionary.
 
   :Args:
-    * ``f``: A path to a file, list of filepaths (to be read into single
-      object) or a file descriptor
+    * ``f``: A path to a file, pathlib object, list of filepaths (to be
+      read into single object) or a file descriptor
     * ``_dict``: The class of the dictionary object to be returned
 
   :Returns:
