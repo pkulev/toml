@@ -44,7 +44,6 @@ Directions
 1. Install `Go <https://golang.org/>`_ (AKA golang)
 2. Get the toml-test suite from `here <https://github.com/BurntSushi/toml-test>`_
    and follow the instructions under the **Try it out** section of the README.
-3. Test your changes for both versions of Python:
+3. Test your changes:
 
-  * For Python 2, use ``~/go/bin/toml-test ./tests/decoding_test2.sh``
-  * For Python 3, use ``~/go/bin/toml-test ./tests/decoding_test3.sh``
+   ~/go/bin/toml-test ./tests/decoding_test.sh

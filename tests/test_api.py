@@ -1,12 +1,13 @@
-import toml
 import copy
-import pytest
+import datetime
 import os
-import sys
+import pathlib
+from collections import OrderedDict
 from decimal import Decimal
 
+import pytest
+import toml
 from toml.decoder import InlineTableDict
-
 
 TEST_STR = """
 [a]\r
@@ -23,20 +24,7 @@ def test_bug_148():
     assert 'a = "\\\\\\u0064"\n' == toml.dumps({'a': '\\\\\\x64'})
 
 
-def test_bug_144():
-    if sys.version_info >= (3,):
-        return
-
-    bug_dict = {'username': '\xd7\xa9\xd7\x9c\xd7\x95\xd7\x9d'}
-    round_trip_bug_dict = toml.loads(toml.dumps(bug_dict))
-    unicoded_bug_dict = {'username': bug_dict['username'].decode('utf-8')}
-    assert round_trip_bug_dict == unicoded_bug_dict
-    assert bug_dict['username'] == (round_trip_bug_dict['username']
-                                    .encode('utf-8'))
-
-
 def test_bug_196():
-    import datetime
     d = datetime.datetime.now()
     bug_dict = {'x': d}
     round_trip_bug_dict = toml.loads(toml.dumps(bug_dict))
@@ -177,31 +165,23 @@ def test_exceptions():
     with pytest.raises(TypeError):
         toml.load(2)
 
-    try:
-        FNFError = FileNotFoundError
-    except NameError:
-        # py2
-        FNFError = IOError
-
-    with pytest.raises(FNFError):
+    with pytest.raises(FileNotFoundError):
         toml.load([])
 
 
-class FakeFile(object):
+class FakeFile:
 
     def __init__(self):
         self.written = ""
 
     def write(self, s):
         self.written += s
-        return None
 
     def read(self):
         return self.written
 
 
 def test_dump():
-    from collections import OrderedDict
     f = FakeFile()
     g = FakeFile()
     h = FakeFile()
@@ -214,11 +194,7 @@ def test_dump():
 def test_paths():
     toml.load("test.toml")
     toml.load(b"test.toml")
-    import sys
-    if (3, 4) <= sys.version_info:
-        import pathlib
-        p = pathlib.Path("test.toml")
-        toml.load(p)
+    toml.load(pathlib.Path("test.toml"))
 
 
 def test_warnings():
@@ -233,13 +209,11 @@ def test_commutativity():
 
 
 def test_pathlib():
-    if (3, 4) <= sys.version_info:
-        import pathlib
-        o = {"root": {"path": pathlib.Path("/home/edgy")}}
-        test_str = """[root]
+    o = {"root": {"path": pathlib.Path("/home/edgy")}}
+    test_str = """[root]
 path = "/home/edgy"
 """
-        assert test_str == toml.dumps(o, encoder=toml.TomlPathlibEncoder())
+    assert test_str == toml.dumps(o, encoder=toml.TomlPathlibEncoder())
 
 
 def test_comment_preserve_decoder_encoder():
@@ -274,8 +248,6 @@ b-comment = "a is 3"
 
 
 def test_deepcopy_timezone():
-    import copy
-
     o = toml.loads("dob = 1979-05-24T07:32:00-08:00")
     o2 = copy.deepcopy(o)
     assert o2["dob"] == o["dob"]
