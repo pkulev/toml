@@ -34,7 +34,3 @@ class TomlNumpyEncoder(TomlEncoder):
 
 class TomlPreserveCommentEncoder(TomlEncoder):
     def __init__(self, _dict: Any = ..., preserve: bool = ...): ...
-
-
-class TomlPathlibEncoder(TomlEncoder):
-    def dump_value(self, v: Any): ...

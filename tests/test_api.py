@@ -213,7 +213,7 @@ def test_pathlib():
     test_str = """[root]
 path = "/home/edgy"
 """
-    assert test_str == toml.dumps(o, encoder=toml.TomlPathlibEncoder())
+    assert test_str == toml.dumps(o)
 
 
 def test_comment_preserve_decoder_encoder():

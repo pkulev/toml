@@ -133,7 +133,11 @@ class TomlEncoder:
             Decimal: _dump_float,
             datetime.datetime: lambda v: v.isoformat().replace('+00:00', 'Z'),
             datetime.time: _dump_time,
-            datetime.date: lambda v: v.isoformat()
+            datetime.date: lambda v: v.isoformat(),
+            pathlib.PurePosixPath: lambda v: _dump_str(str(v)),
+            pathlib.PureWindowsPath: lambda v: _dump_str(str(v)),
+            pathlib.PosixPath: lambda v: _dump_str(str(v)),
+            pathlib.WindowsPath: lambda v: _dump_str(str(v)),
         }
 
     def get_empty_table(self):
@@ -281,14 +285,3 @@ class TomlPreserveCommentEncoder(TomlEncoder):
         from toml.decoder import CommentValue
         super().__init__(_dict, preserve)
         self.dump_funcs[CommentValue] = lambda v: v.dump(self.dump_value)
-
-
-class TomlPathlibEncoder(TomlEncoder):
-
-    def _dump_pathlib_path(self, v):
-        return _dump_str(str(v))
-
-    def dump_value(self, v):
-        if isinstance(v, pathlib.PurePath):
-            v = str(v)
-        return super().dump_value(v)
