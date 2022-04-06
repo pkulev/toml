@@ -2,41 +2,53 @@ import datetime
 import pathlib
 import re
 from decimal import Decimal
+from typing import IO, Any, Union, Optional, NoReturn
 
 from toml.decoder import InlineTableDict
 
 
-def dump(o, f, encoder=None):
-    """Writes out dict as toml to a file
+def dump(obj: dict[str, Any],
+         out: Union[bytes, str, IO, pathlib.PurePath],
+         encoder: Optional["TomlEncoder"] = None) -> NoReturn:
+    """Writes out dict as TOML to a file.
 
     Args:
-        o: Object to dump into toml
-        f: File descriptor where the toml should be stored
-        encoder: The ``TomlEncoder`` to use for constructing the output string
+        obj: Object to dump into TOML.
+        out: Path or file object where the TOML should be stored.
+        encoder: The ``TomlEncoder`` to use for constructing the output string.
 
     Returns:
-        String containing the toml corresponding to dictionary
+        None.
 
     Raises:
-        TypeError: When anything other than file descriptor is passed
+        TypeError: When something unsupported was passed.
     """
 
-    if not f.write:
-        raise TypeError("You can only dump an object to a file descriptor")
-    d = dumps(o, encoder=encoder)
-    f.write(d)
-    return d
+    if isinstance(out, bytes):
+        out = out.decode("utf-8")
+
+    if isinstance(out, str):
+        out = pathlib.Path(out)
+
+    if isinstance(out, pathlib.PurePath):
+        out.write_text(dumps(obj, encoder=encoder), encoding="utf-8")
+        return
+
+    if not hasattr(out, "write"):
+        raise TypeError("'out' must be string, pathlib object or opened file")
+
+    out.write(dumps(obj, encoder=encoder))
 
 
-def dumps(o, encoder=None):
-    """Stringifies input dict as toml
+def dumps(obj: dict[str, Any], encoder: Optional["TomlEncoder"] = None):
+    """Stringifies input dict as TOML.
 
     Args:
-        o: Object to dump into toml
-        encoder: The ``TomlEncoder`` to use for constructing the output string
+        obj: Object to dump into TOML.
+        encoder: The ``TomlEncoder`` to use for constructing the output string.
 
     Returns:
-        String containing the toml corresponding to dict
+        String containing the TOML corresponding to dict.
 
     Examples:
         ```python
@@ -53,10 +65,10 @@ def dumps(o, encoder=None):
 
     retval = ""
     if encoder is None:
-        encoder = TomlEncoder(o.__class__)
-    addtoretval, sections = encoder.dump_sections(o, "")
+        encoder = TomlEncoder(obj.__class__)
+    addtoretval, sections = encoder.dump_sections(obj, "")
     retval += addtoretval
-    outer_objs = [id(o)]
+    outer_objs = [id(obj)]
     while sections:
         section_ids = [id(section) for section in sections.values()]
         for outer_obj in outer_objs:
@@ -120,6 +132,7 @@ def _dump_time(v):
 
 
 class TomlEncoder:
+    """Extendable base TOML encoder."""
 
     def __init__(self, _dict=dict, preserve=False):
         self._dict = _dict
