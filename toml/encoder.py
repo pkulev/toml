@@ -1,4 +1,7 @@
+import collections.abc
 import datetime
+import enum
+import ipaddress
 import pathlib
 import re
 from decimal import Decimal
@@ -137,7 +140,7 @@ class TomlEncoder:
     def __init__(self, _dict=dict, preserve=False):
         self._dict = _dict
         self.preserve = preserve
-        self.dump_funcs = {
+        self.dump_by_type = {
             str: _dump_str,
             list: self.dump_list,
             bool: lambda v: str(v).lower(),
@@ -147,11 +150,37 @@ class TomlEncoder:
             datetime.datetime: lambda v: v.isoformat().replace('+00:00', 'Z'),
             datetime.time: _dump_time,
             datetime.date: lambda v: v.isoformat(),
-            pathlib.PurePosixPath: lambda v: _dump_str(str(v)),
-            pathlib.PureWindowsPath: lambda v: _dump_str(str(v)),
-            pathlib.PosixPath: lambda v: _dump_str(str(v)),
-            pathlib.WindowsPath: lambda v: _dump_str(str(v)),
         }
+        self.dump_by_instance = {
+            pathlib.PurePath: lambda v: _dump_str(str(v)),
+            # TODO: can enum contain types other than int and str?
+            enum.Enum: lambda v: _dump_str(str(v.value)),
+            # TODO: add other ipaddress types support
+            ipaddress.IPv4Address: lambda v: _dump_str(str(v)),
+            collections.abc.Iterable: self.dump_by_type[list],
+        }
+
+    def get_dump_function(self, value):
+        """Return dump function by value's type.
+
+        Function dispatching:
+        * try to get dump function by type(value)
+        * if no function matched, try to get it by isinstance(value T)
+        * if no function matched, use str dump function
+        """
+
+        dump_fn = self.dump_by_type.get(type(value))
+        for vtype, func in self.dump_by_instance.items():
+            if dump_fn is not None:
+                break
+
+            if isinstance(value, vtype):
+                dump_fn = func
+
+        if dump_fn is None:
+            dump_fn = self.dump_by_type[str]
+
+        return dump_fn
 
     def get_empty_table(self):
         return self._dict()
@@ -181,12 +210,17 @@ class TomlEncoder:
             return str(self.dump_value(section))
 
     def dump_value(self, v):
-        # Lookup function corresponding to v's type
-        dump_fn = self.dump_funcs.get(type(v))
-        if dump_fn is None and hasattr(v, '__iter__'):
-            dump_fn = self.dump_funcs[list]
-        # Evaluate function (if it exists) else return v
-        return dump_fn(v) if dump_fn is not None else self.dump_funcs[str](v)
+        """Dump value using registered dump functions.
+
+        Dump functions can be registered in a two ways:
+        * strictly by type: add function by type to TomlEncoder.dump_by_type.
+          They will be used for matching by type(value) only.
+        * by checking with isinstance: add function by type to
+          TomlEncoder.dump_by_instance.
+        """
+
+        dump_fn = self.get_dump_function(v)
+        return dump_fn(v)
 
     def dump_sections(self, o, sup):
         retstr = ""
@@ -281,12 +315,12 @@ class TomlNumpyEncoder(TomlEncoder):
     def __init__(self, _dict=dict, preserve=False):
         import numpy as np
         super().__init__(_dict, preserve)
-        self.dump_funcs[np.float16] = _dump_float
-        self.dump_funcs[np.float32] = _dump_float
-        self.dump_funcs[np.float64] = _dump_float
-        self.dump_funcs[np.int16] = self._dump_int
-        self.dump_funcs[np.int32] = self._dump_int
-        self.dump_funcs[np.int64] = self._dump_int
+        self.dump_by_type[np.float16] = _dump_float
+        self.dump_by_type[np.float32] = _dump_float
+        self.dump_by_type[np.float64] = _dump_float
+        self.dump_by_type[np.int16] = self._dump_int
+        self.dump_by_type[np.int32] = self._dump_int
+        self.dump_by_type[np.int64] = self._dump_int
 
     def _dump_int(self, v):
         return "{}".format(int(v))
@@ -297,4 +331,4 @@ class TomlPreserveCommentEncoder(TomlEncoder):
     def __init__(self, _dict=dict, preserve=False):
         from toml.decoder import CommentValue
         super().__init__(_dict, preserve)
-        self.dump_funcs[CommentValue] = lambda v: v.dump(self.dump_value)
+        self.dump_by_type[CommentValue] = lambda v: v.dump(self.dump_value)

@@ -1,5 +1,7 @@
 import copy
 import datetime
+import enum
+import ipaddress
 import os
 import pathlib
 from collections import OrderedDict
@@ -214,6 +216,38 @@ def test_pathlib():
 path = "/home/edgy"
 """
     assert test_str == toml.dumps(o)
+
+
+def test_ipaddress():
+    o = {"facts": {"localhost": ipaddress.IPv4Address("127.0.0.1")}}
+    test_str = """[facts]
+localhost = "127.0.0.1"
+"""
+
+    assert toml.dumps(o) == test_str
+
+
+def test_enum():
+
+    class Fruits(enum.Enum):
+        apple = "apple"
+        banana = "banana"
+
+
+    o = {
+        "inventory": {
+            "hands": Fruits.apple,
+            "backpack": [Fruits.apple, Fruits.apple, Fruits.banana],
+        }
+    }
+
+    test_str = """[inventory]
+hands = "apple"
+backpack = [ "apple", "apple", "banana",]
+"""
+
+    assert toml.dumps(o) == test_str
+
 
 
 def test_comment_preserve_decoder_encoder():
